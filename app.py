@@ -1,42 +1,43 @@
 import os
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 from google import genai
-from google.genai import types
 
 app = Flask(__name__)
-client = genai.Client()
+# Enable CORS so your browser/Bubble frontend can talk to Render
+CORS(app)
+
+# Initialize the Gemini client using the environment variable
+# (Make sure GEMINI_API_KEY is set in your Render dashboard environment variables)
+client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 
 @app.route("/chat", methods=["POST"])
-def generate_talking_head():
-    data = request.json
-    user_input = data.get("message", "")
-    
-    if not user_input:
-        return jsonify({"error": "No message provided"}), 400
-
-    # Prompt describing Travis speaking and moving
-    prompt = (
-        f"A video of Travis, a sharp and helpful AI assistant, talking directly to the camera "
-        f"and saying: {user_input}"
-    )
-
+def chat():
     try:
-        # Using Gemini Omni Flash for native video generation with speech
-        result = client.models.generate_content(
-            model='gemini-omni-1.2-flash',
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="video/mp4" # Requesting direct video output if supported by your pipeline
-            )
+        data = request.get_json()
+        user_message = data.get("message", "")
+        
+        if not user_message:
+            return jsonify({"error": "No message provided" }, 400)
+
+        # Call Gemini 2.5 Flash with custom system instructions to shape Travis's personality
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=user_message,
+            config={
+                'system_instruction': 'You are Travis, a helpful, witty, and concise AI assistant built on a £0 custom tech stack. Speak naturally and keep answers conversational.'
+            }
         )
-        
-        # In production, you'd parse the video URI or stream returned by the API
-        return jsonify({"status": "success", "video_output": str(result)})
-        
+
+        return jsonify({"response": response.text})
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route("/", methods=["GET"])
+def home():
+    return jsonify({"status": "Travis AI backend is live!"})
+
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
-  
+    app.run(host="0.0.0.0", port=5000)
+    
