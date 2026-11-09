@@ -1,4 +1,5 @@
-flask
-gunicorn
+Flask==3.1.1
 flask-cors
+requests==2.32.4
+gunicorn==23.0.0
 google-genai>=1.0.0
