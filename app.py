@@ -117,6 +117,7 @@ def status():
         ),
         "simli_configured": bool(SIMLI_API_KEY),
         "simli_face_configured": bool(SIMLI_FACE_ID),
+        "multi_face_supported": True,
     }
     return jsonify(**configured, status="ready" if any(configured.values()) else "needs_setup")
 
@@ -319,3 +320,4 @@ if os.environ.get("RENDER"):
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "5000")), debug=False)
+    
