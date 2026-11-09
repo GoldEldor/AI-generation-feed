@@ -1,7 +1,8 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>LiveVision AI</title>
 <style>
 :root{color-scheme:dark;--bg:#0b1020;--panel:#151d32;--line:#2b3855;--text:#edf3ff;--muted:#9eacc8;--accent:#8b7cff}
@@ -17,60 +18,89 @@ label{display:block;color:var(--muted);font-size:14px;margin:14px 0 6px}input,se
 .preview img{max-width:100%;max-height:420px;object-fit:contain;border-radius:10px}.feed{width:100%;min-height:250px;border:0;border-radius:12px;background:#050914}
 .row{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}.row button{flex:1}.hint{font-size:13px;color:var(--muted);line-height:1.5}.status{margin-top:12px;padding:11px;border-radius:10px;background:#0d1528;color:#b9c7e2;white-space:pre-wrap;overflow-wrap:anywhere}.hidden{display:none}
 @media(max-width:760px){main{padding:15px}.grid{grid-template-columns:1fr}.preview{min-height:220px}}
-</style></head>
-<body><main id="app">
-<div class="top"><div><h1>✨ LiveVision AI</h1><p class="sub">Image-to-video · Live avatar · Real-time conversation</p></div><span class="badge" id="apiState">Checking API connections…</span></div>
-<div class="tabs" role="tablist">
-<button class="tab" data-tab="video" aria-selected="true">🎬 Video generator</button>
-<button class="tab" data-tab="live" aria-selected="false">📹 Live AI camera</button>
-<button class="tab" data-tab="talk" aria-selected="false">🗣️ Live conversation</button>
+</style>
+</head>
+<body>
+<main id="app">
+<div class="top">
+  <div><h1>✨ LiveVision AI</h1><p class="sub">Image-to-video · Live avatar · Real-time conversation</p></div>
+  <span class="badge" id="apiState">Checking API connections…</span>
 </div>
+
+<div class="tabs" role="tablist">
+  <button class="tab" data-tab="video" aria-selected="true">🎬 Video generator</button>
+  <button class="tab" data-tab="live" aria-selected="false">📹 Live AI camera</button>
+  <button class="tab" data-tab="talk" aria-selected="false">🗣️ Live conversation</button>
+</div>
+
 <div class="grid">
 <section class="panel">
-<div id="videoPanel">
-<h2>Generate a talking video</h2><p class="hint">Upload a JPEG/PNG portrait, have Gemini write a script, and generate a rendered video with Tavus.</p>
-<label for="videoImage">Portrait image (JPEG/PNG)</label><input id="videoImage" type="file" accept="image/jpeg,image/png">
-<div class="preview" id="videoPreview">Your image preview appears here.</div>
-<button id="generateScript" type="button" class="row" style="margin-top:14px;">✨ Generate script with Gemini</button>
-<label for="script">What should the avatar say?</label><textarea id="script" placeholder="Hello! Welcome to my AI video."></textarea>
-<button class="primary" id="makeVideo">Generate video with Tavus</button>
-<div class="status" id="videoStatus" aria-live="polite">Waiting for an image and script.</div>
-<div id="videoResult"></div>
-</div>
+  <!-- Video Generator Tab -->
+  <div id="videoPanel">
+    <h2>Generate a talking video</h2>
+    <p class="hint">Upload a JPEG/PNG portrait, have Gemini write a script, and generate a rendered video with Tavus.</p>
+    <label for="videoImage">Portrait image (JPEG/PNG)</label>
+    <input id="videoImage" type="file" accept="image/jpeg,image/png">
+    <div class="preview" id="videoPreview">Your image preview appears here.</div>
+    <button id="generateScript" type="button" class="row" style="margin-top:14px;">✨ Generate script with Gemini</button>
+    <label for="script">What should the avatar say?</label>
+    <textarea id="script" placeholder="Hello! Welcome to my AI video."></textarea>
+    <button class="primary" id="makeVideo">Generate video with Tavus</button>
+    <div class="status" id="videoStatus" aria-live="polite">Waiting for an image and script.</div>
+    <div id="videoResult"></div>
+  </div>
 
-<div id="livePanel" class="hidden">
-<h2>Live AI camera</h2>
-<p class="hint">Select an avatar face or enter a custom Simli face ID for your live session.</p>
+  <!-- Live AI Camera Tab (Multi-Face support) -->
+  <div id="livePanel" class="hidden">
+    <h2>Live AI camera</h2>
+    <p class="hint">Select an avatar face or enter a custom Simli face ID for your live session.</p>
 
-<label for="faceSelect">Choose Avatar Face</label>
-<select id="faceSelect">
-  <option value="">-- Custom Face ID (Enter below) --</option>
-  <option value="YOUR_FIRST_FACE_ID_HERE">Avatar 1 (e.g., Alex)</option>
-  <option value="YOUR_SECOND_FACE_ID_HERE">Avatar 2 (e.g., Sarah)</option>
-</select>
+    <label for="faceSelect">Choose Avatar Face</label>
+    <select id="faceSelect">
+      <option value="">-- Custom Face ID (Enter below) --</option>
+      <option value="YOUR_FIRST_FACE_ID_HERE">Avatar 1 (e.g., Alex)</option>
+      <option value="YOUR_SECOND_FACE_ID_HERE">Avatar 2 (e.g., Sarah)</option>
+    </select>
 
-<label for="faceId">Or Custom Simli face ID</label><input id="faceId" placeholder="Enter your Simli face ID">
+    <label for="faceId">Or Custom Simli face ID</label>
+    <input id="faceId" placeholder="Enter your Simli face ID">
 
-<div class="preview" id="livePreview"><video id="simliVideo" autoplay playsinline class="feed"></video><audio id="simliAudio" autoplay></audio><span id="livePlaceholder">Your live AI avatar will appear here.</span></div>
-<button class="primary" id="startSimli">Create live session</button>
-<div class="status" id="liveStatus" aria-live="polite">Not connected.</div>
-<p class="hint">Simli animates a face ID using your microphone audio. Allow microphone access when your browser asks.</p>
-<button id="stopSimli" type="button">End live session</button>
-</div>
+    <div class="preview" id="livePreview">
+      <video id="simliVideo" autoplay playsinline class="feed"></video>
+      <audio id="simliAudio" autoplay></audio>
+      <span id="livePlaceholder">Your live AI avatar will appear here.</span>
+    </div>
+    <button class="primary" id="startSimli">Create live session</button>
+    <div class="status" id="liveStatus" aria-live="polite">Not connected.</div>
+    <p class="hint">Simli animates a face ID using your microphone audio. Allow microphone access when your browser asks.</p>
+    <button id="stopSimli" type="button">End live session</button>
+  </div>
 
-<div id="talkPanel" class="hidden">
-<h2>Talk to your avatar</h2><p class="hint">Create a Tavus real-time conversation using your configured replica and persona. The returned conversation URL opens the live experience.</p>
-<button class="primary" id="startTalk">Start live conversation</button>
-<div class="status" id="talkStatus" aria-live="polite">Not connected.</div>
-</div>
+  <!-- Live Conversation Tab -->
+  <div id="talkPanel" class="hidden">
+    <h2>Talk to your avatar</h2>
+    <p class="hint">Create a Tavus real-time conversation using your configured replica and persona. The returned conversation URL opens the live experience.</p>
+    <button class="primary" id="startTalk">Start live conversation</button>
+    <div class="status" id="talkStatus" aria-live="polite">Not connected.</div>
+  </div>
 </section>
+
 <aside class="panel">
-<h2>Connection & setup</h2><p class="hint">Add API keys in Render → your service → Environment. Never paste secret keys into this page.</p>
-<div class="status" id="connectionDetails">Checking…</div>
-<h3>What you need</h3><ul class="hint"><li>Simli API key and face IDs for the live camera.</li><li>Tavus API key, replica ID and persona ID for video and conversation.</li><li>Gemini API key for AI script generation.</li></ul>
-<h3>Privacy</h3><p class="hint">Metadata (EXIF/GPS) is scrubbed locally by the C++ module upon upload before hitting Gemini or server storage.</p>
-</aside></div>
+  <h2>Connection & setup</h2>
+  <p class="hint">Add API keys in Render → your service → Environment. Never paste secret keys into this page.</p>
+  <div class="status" id="connectionDetails">Checking…</div>
+  <h3>What you need</h3>
+  <ul class="hint">
+    <li>Simli API key and face IDs for the live camera.</li>
+    <li>Tavus API key, replica ID and persona ID for video and conversation.</li>
+    <li>Gemini API key for AI script generation.</li>
+  </ul>
+  <h3>Privacy</h3>
+  <p class="hint">Metadata (EXIF/GPS) is scrubbed locally by the C++ module upon upload before hitting Gemini or server storage.</p>
+</aside>
+</div>
 </main>
+
 <script type="module">
 const $ = id => document.getElementById(id);
 
@@ -357,5 +387,5 @@ window.addEventListener("beforeunload", () => {
 refreshStatus();
 </script>
 </body>
-  </html>
-  
+    </html>
+    
