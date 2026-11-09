@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: livevision-ai
+    runtime: python
+    buildCommand: pip install -r requirements.txt && mkdir -p native && g++ -O2 -std=c++17 -shared -fPIC native/livevision_native.cpp -o native/liblivevision_native.so
+    startCommand: gunicorn --workers 2 --threads 4 --timeout 120 wsgi:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: TAVUS_API_KEY
+        sync: false
+      - key: TAVUS_REPLICA_ID
+        sync: false
+      - key: TAVUS_PERSONA_ID
+        sync: false
+      - key: SIMLI_API_KEY
+        sync: false
+      - key: SIMLI_FACE_ID
+        sync: false
+        
