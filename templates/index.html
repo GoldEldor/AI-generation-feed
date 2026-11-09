@@ -1,1 +1,361 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LiveVision AI</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1020;--panel:#151d32;--line:#2b3855;--text:#edf3ff;--muted:#9eacc8;--accent:#8b7cff}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#192448,#0b1020 65%);font:16px system-ui;color:var(--text)}
+main{max-width:1100px;margin:auto;padding:24px}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+h1{margin:0;font-size:clamp(26px,5vw,38px)}.sub{color:var(--muted);margin:6px 0 22px}
+.badge{border:1px solid var(--line);border-radius:99px;padding:8px 12px;color:var(--muted);font-size:13px}
+.grid{display:grid;grid-template-columns:1.2fr .8fr;gap:18px}.panel{background:#151d32eF;border:1px solid var(--line);border-radius:18px;padding:18px;min-width:0}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}.tab,button{border:1px solid var(--line);background:#202b45;color:var(--text);border-radius:11px;padding:11px 14px;cursor:pointer;font:inherit}
+.tab[aria-selected=true],button.primary{background:var(--accent);border-color:var(--accent);color:white}
+label{display:block;color:var(--muted);font-size:14px;margin:14px 0 6px}input,select,textarea{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:#0d1528;color:var(--text);font:inherit}textarea{min-height:105px;resize:vertical}
+.preview{min-height:280px;border:1px dashed #52617e;border-radius:14px;display:grid;place-items:center;overflow:hidden;background:#0c1426;color:var(--muted);text-align:center;padding:12px}
+.preview img{max-width:100%;max-height:420px;object-fit:contain;border-radius:10px}.feed{width:100%;min-height:250px;border:0;border-radius:12px;background:#050914}
+.row{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}.row button{flex:1}.hint{font-size:13px;color:var(--muted);line-height:1.5}.status{margin-top:12px;padding:11px;border-radius:10px;background:#0d1528;color:#b9c7e2;white-space:pre-wrap;overflow-wrap:anywhere}.hidden{display:none}
+@media(max-width:760px){main{padding:15px}.grid{grid-template-columns:1fr}.preview{min-height:220px}}
+</style></head>
+<body><main id="app">
+<div class="top"><div><h1>✨ LiveVision AI</h1><p class="sub">Image-to-video · Live avatar · Real-time conversation</p></div><span class="badge" id="apiState">Checking API connections…</span></div>
+<div class="tabs" role="tablist">
+<button class="tab" data-tab="video" aria-selected="true">🎬 Video generator</button>
+<button class="tab" data-tab="live" aria-selected="false">📹 Live AI camera</button>
+<button class="tab" data-tab="talk" aria-selected="false">🗣️ Live conversation</button>
+</div>
+<div class="grid">
+<section class="panel">
+<div id="videoPanel">
+<h2>Generate a talking video</h2><p class="hint">Upload a JPEG/PNG portrait, have Gemini write a script, and generate a rendered video with Tavus.</p>
+<label for="videoImage">Portrait image (JPEG/PNG)</label><input id="videoImage" type="file" accept="image/jpeg,image/png">
+<div class="preview" id="videoPreview">Your image preview appears here.</div>
+<button id="generateScript" type="button" class="row" style="margin-top:14px;">✨ Generate script with Gemini</button>
+<label for="script">What should the avatar say?</label><textarea id="script" placeholder="Hello! Welcome to my AI video."></textarea>
+<button class="primary" id="makeVideo">Generate video with Tavus</button>
+<div class="status" id="videoStatus" aria-live="polite">Waiting for an image and script.</div>
+<div id="videoResult"></div>
+</div>
 
+<div id="livePanel" class="hidden">
+<h2>Live AI camera</h2>
+<p class="hint">Select an avatar face or enter a custom Simli face ID for your live session.</p>
+
+<label for="faceSelect">Choose Avatar Face</label>
+<select id="faceSelect">
+  <option value="">-- Custom Face ID (Enter below) --</option>
+  <option value="YOUR_FIRST_FACE_ID_HERE">Avatar 1 (e.g., Alex)</option>
+  <option value="YOUR_SECOND_FACE_ID_HERE">Avatar 2 (e.g., Sarah)</option>
+</select>
+
+<label for="faceId">Or Custom Simli face ID</label><input id="faceId" placeholder="Enter your Simli face ID">
+
+<div class="preview" id="livePreview"><video id="simliVideo" autoplay playsinline class="feed"></video><audio id="simliAudio" autoplay></audio><span id="livePlaceholder">Your live AI avatar will appear here.</span></div>
+<button class="primary" id="startSimli">Create live session</button>
+<div class="status" id="liveStatus" aria-live="polite">Not connected.</div>
+<p class="hint">Simli animates a face ID using your microphone audio. Allow microphone access when your browser asks.</p>
+<button id="stopSimli" type="button">End live session</button>
+</div>
+
+<div id="talkPanel" class="hidden">
+<h2>Talk to your avatar</h2><p class="hint">Create a Tavus real-time conversation using your configured replica and persona. The returned conversation URL opens the live experience.</p>
+<button class="primary" id="startTalk">Start live conversation</button>
+<div class="status" id="talkStatus" aria-live="polite">Not connected.</div>
+</div>
+</section>
+<aside class="panel">
+<h2>Connection & setup</h2><p class="hint">Add API keys in Render → your service → Environment. Never paste secret keys into this page.</p>
+<div class="status" id="connectionDetails">Checking…</div>
+<h3>What you need</h3><ul class="hint"><li>Simli API key and face IDs for the live camera.</li><li>Tavus API key, replica ID and persona ID for video and conversation.</li><li>Gemini API key for AI script generation.</li></ul>
+<h3>Privacy</h3><p class="hint">Metadata (EXIF/GPS) is scrubbed locally by the C++ module upon upload before hitting Gemini or server storage.</p>
+</aside></div>
+</main>
+<script type="module">
+const $ = id => document.getElementById(id);
+
+let uploadedFilename = "";
+let simliClient = null;
+let micStream = null;
+let audioContext = null;
+let processor = null;
+
+async function readResponse(response) {
+  let data = {};
+  try { data = await response.json(); } catch {}
+  if (!response.ok) throw new Error(data.error || `Request failed (${response.status})`);
+  return data;
+}
+
+async function postJSON(path, body = {}) {
+  const response = await fetch(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  return readResponse(response);
+}
+
+async function refreshStatus() {
+  try {
+    const response = await fetch("/api/status");
+    const status = await readResponse(response);
+    $("apiState").textContent = status.status === "ready"
+      ? "Server online · providers configured"
+      : "Server online · setup needed";
+    $("connectionDetails").textContent =
+      `Gemini: ${status.gemini_configured ? "configured" : "missing"}\n` +
+      `Tavus video: ${status.tavus_configured ? "configured" : "missing"}\n` +
+      `Tavus conversation: ${status.tavus_conversation_configured ? "configured" : "missing"}\n` +
+      `Simli: ${status.simli_configured ? "configured" : "missing"}`;
+  } catch (error) {
+    $("apiState").textContent = "Server unavailable";
+    $("connectionDetails").textContent = error.message;
+  }
+}
+
+document.querySelectorAll(".tab").forEach(button => {
+  button.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach(tab =>
+      tab.setAttribute("aria-selected", String(tab === button))
+    );
+    ["video", "live", "talk"].forEach(name =>
+      $(name + "Panel").classList.toggle("hidden", name !== button.dataset.tab)
+    );
+  });
+});
+
+$("videoImage").addEventListener("change", async event => {
+  const file = event.target.files?.[0];
+  uploadedFilename = "";
+  if (!file) return;
+
+  $("videoResult").replaceChildren();
+  if (!file.type.startsWith("image/")) {
+    $("videoStatus").textContent = "Choose a JPEG or PNG image file.";
+    return;
+  }
+
+  $("videoPreview").textContent = "Uploading & stripping metadata…";
+  const form = new FormData();
+  form.append("image", file);
+
+  try {
+    const response = await fetch("/api/upload", { method: "POST", body: form });
+    const data = await readResponse(response);
+    uploadedFilename = data.filename;
+
+    $("videoPreview").replaceChildren();
+    const image = document.createElement("img");
+    image.src = data.image_url;
+    image.alt = "Uploaded image preview";
+    $("videoPreview").append(image);
+    $("videoStatus").textContent = "Image uploaded & cleaned. Generate a script or enter your own.";
+  } catch (error) {
+    $("videoPreview").textContent = error.message;
+    $("videoStatus").textContent = error.message;
+  }
+});
+
+$("makeVideo").addEventListener("click", async () => {
+  const script = $("script").value.trim();
+  if (!script) {
+    $("videoStatus").textContent = "Enter a script first. Generate one with Gemini or write your own.";
+    return;
+  }
+
+  const button = $("makeVideo");
+  button.disabled = true;
+  $("videoResult").replaceChildren();
+  $("videoStatus").textContent = "Sending video request to Tavus…";
+
+  try {
+    const data = await postJSON("/api/tavus/video", { script });
+    $("videoStatus").textContent = "Tavus accepted the request.";
+    const output = document.createElement("pre");
+    output.className = "status";
+    output.textContent = JSON.stringify(data, null, 2);
+    $("videoResult").append(output);
+
+    const url = data.video_url || data.hosted_url;
+    if (typeof url === "string" && url.startsWith("https://")) {
+      const video = document.createElement("video");
+      video.controls = true;
+      video.src = url;
+      video.className = "feed";
+      $("videoResult").append(video);
+    }
+  } catch (error) {
+    $("videoStatus").textContent = error.message;
+  } finally {
+    button.disabled = false;
+  }
+});
+
+const generateScriptButton = $("generateScript");
+if (generateScriptButton) {
+  generateScriptButton.addEventListener("click", async () => {
+    if (!uploadedFilename) {
+      $("videoStatus").textContent = "Upload an image first.";
+      return;
+    }
+    generateScriptButton.disabled = true;
+    $("videoStatus").textContent = "Gemini is analyzing the clean image…";
+    try {
+      const data = await postJSON("/api/generate-script", {
+        filename: uploadedFilename,
+        prompt: "Write a friendly, engaging introduction."
+      });
+      $("script").value = data.script;
+      $("videoStatus").textContent = "Script ready. Review or edit it, then generate the video.";
+    } catch (error) {
+      $("videoStatus").textContent = error.message;
+    } finally {
+      generateScriptButton.disabled = false;
+    }
+  });
+}
+
+$("startSimli").addEventListener("click", async () => {
+  if (simliClient) return;
+
+  const button = $("startSimli");
+  button.disabled = true;
+  $("liveStatus").textContent = "Creating Simli session…";
+
+  try {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      throw new Error("Microphone access requires HTTPS or localhost.");
+    }
+
+    const selectedFace = $("faceSelect").value;
+    const customFace = $("faceId").value.trim();
+    const activeFaceId = selectedFace || customFace;
+
+    if (!activeFaceId) {
+      throw new Error("Please select an avatar face or enter a Simli face ID.");
+    }
+
+    const session = await postJSON("/api/simli/session", {
+      face_id: activeFaceId
+    });
+    if (!session.session_token) throw new Error("Simli response did not include a session token.");
+
+    const sdk = await import("https://cdn.jsdelivr.net/npm/simli-client@3.2.0/+esm");
+    simliClient = new sdk.SimliClient(
+      session.session_token,
+      $("simliVideo"),
+      $("simliAudio"),
+      null,
+      sdk.LogLevel.INFO
+    );
+
+    simliClient.on("speaking", () => $("liveStatus").textContent = "Connected · avatar speaking");
+    simliClient.on("silent", () => $("liveStatus").textContent = "Connected · listening");
+    await simliClient.start();
+    $("livePlaceholder").classList.add("hidden");
+
+    micStream = await navigator.mediaDevices.getUserMedia({
+      audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true },
+      video: false
+    });
+
+    audioContext = new AudioContext();
+    await audioContext.resume();
+    const source = audioContext.createMediaStreamSource(micStream);
+    processor = audioContext.createScriptProcessor(4096, 1, 1);
+    source.connect(processor);
+    processor.connect(audioContext.destination);
+
+    processor.onaudioprocess = event => {
+      if (!simliClient) return;
+      const input = event.inputBuffer.getChannelData(0);
+      const ratio = audioContext.sampleRate / 16000;
+      const length = Math.floor(input.length / ratio);
+      const pcm = new Int16Array(length);
+
+      for (let i = 0; i < length; i++) {
+        const sample = input[Math.floor(i * ratio)];
+        pcm[i] = Math.max(-1, Math.min(1, sample)) * 32767;
+      }
+
+      try {
+        simliClient.sendAudioData(new Uint8Array(pcm.buffer));
+      } catch {}
+    };
+
+    $("liveStatus").textContent = "LIVE · microphone connected · speak to animate the avatar";
+  } catch (error) {
+    $("liveStatus").textContent = "Could not start: " + error.message;
+    if (simliClient) {
+      try { await simliClient.stop(); } catch {}
+      simliClient = null;
+    }
+    if (micStream) micStream.getTracks().forEach(track => track.stop());
+    micStream = null;
+  } finally {
+    button.disabled = false;
+  }
+});
+
+async function stopSimli() {
+  if (processor) {
+    processor.disconnect();
+    processor.onaudioprocess = null;
+    processor = null;
+  }
+  if (audioContext) {
+    await audioContext.close().catch(() => {});
+    audioContext = null;
+  }
+  if (micStream) {
+    micStream.getTracks().forEach(track => track.stop());
+    micStream = null;
+  }
+  if (simliClient) {
+    await simliClient.stop().catch(() => {});
+    simliClient = null;
+  }
+  $("liveStatus").textContent = "Session ended.";
+  $("livePlaceholder").classList.remove("hidden");
+}
+
+$("stopSimli").addEventListener("click", stopSimli);
+
+$("startTalk").addEventListener("click", async () => {
+  const button = $("startTalk");
+  button.disabled = true;
+  $("talkStatus").textContent = "Creating conversation…";
+  try {
+    const data = await postJSON("/api/tavus/conversation", {});
+    $("talkStatus").textContent = JSON.stringify(data, null, 2);
+    const url = data.conversation_url || data.url;
+    if (url) {
+      const link = document.createElement("a");
+      link.href = url;
+      link.target = "_blank";
+      link.rel = "noopener";
+      link.textContent = "Join live conversation";
+      link.style.display = "inline-block";
+      link.style.padding = "12px";
+      link.style.marginTop = "10px";
+      link.className = "primary";
+      $("talkStatus").append(document.createElement("br"), link);
+    }
+  } catch (error) {
+    $("talkStatus").textContent = error.message;
+  } finally {
+    button.disabled = false;
+  }
+});
+
+window.addEventListener("beforeunload", () => {
+  if (micStream) micStream.getTracks().forEach(track => track.stop());
+  if (simliClient) simliClient.stop();
+});
+
+refreshStatus();
+</script>
+</body>
+  </html>
+  
